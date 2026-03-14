@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Financial Planner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;padding:20px;font-size:14px}
+  h1{color:#f8fafc;font-size:20px;font-weight:700;margin-bottom:4px}
+  .sub{color:#94a3b8;font-size:13px;margin-bottom:20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+  .card{background:#1e293b;border-radius:10px;padding:14px 16px;border:1px solid #334155}
+  .card-label{color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+  .card-val{font-size:22px;font-weight:700}
+  .card-sub{font-size:11px;color:#64748b;margin-top:2px}
+  .section{background:#1e293b;border-radius:10px;padding:16px;border:1px solid #334155;margin-bottom:16px}
+  .section-title{font-weight:700;color:#f8fafc;font-size:15px;margin-bottom:14px}
+  .portfolio-row{display:flex;align-items:center;padding:10px 8px;gap:10px;cursor:pointer;border-bottom:1px solid #0f172a;border-radius:8px;transition:background .15s}
+  .portfolio-row:hover{background:#0f172a88}
+  .fund-list{padding-left:4px;margin-top:6px}
+  .fund-item{color:#94a3b8;font-size:12px;padding:2px 0}
+  .pill{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+  .tag{font-size:10px;padding:2px 7px;border-radius:99px;font-weight:600;background:#334155;color:#94a3b8}
+  .pie-wrap{width:180px;flex-shrink:0;text-align:center}
+  .pie-hint{color:#64748b;font-size:11px;margin-top:4px}
+  .port-flex{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+  .port-list{flex:1;min-width:280px}
+  input[type=range]{width:100%;margin:6px 0}
+  .range-labels{display:flex;justify-content:space-between;font-size:11px;color:#475569;margin-top:4px}
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .stat-box{background:#0f172a;border-radius:8px;padding:12px;border:1px solid #1e293b}
+  .stat-label{color:#64748b;font-size:11px;margin-bottom:4px}
+  .stat-val{font-weight:700;font-size:16px}
+  .stat-sub{color:#475569;font-size:11px}
+  .rec-box{margin-top:14px;background:#0f172a;border-radius:8px;padding:12px;border:1px solid #334155}
+  .rec-title{font-weight:600;color:#f8fafc;margin-bottom:8px}
+  .rec-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1e293b;font-size:12px}
+  .rec-row:last-child{border-bottom:none}
+  .chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+  .chart-title{font-weight:700;color:#f8fafc;font-size:15px}
+  .chart-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .ctrl{display:flex;align-items:center;gap:6px}
+  .ctrl label{color:#94a3b8;font-size:12px}
+  input[type=number].ni{background:#0f172a;border:1px solid #334155;border-radius:6px;color:#fcd34d;padding:3px 6px;font-size:13px;font-weight:700;text-align:center}
+  /* pct input inside portfolio row */
+  .pct-input{background:#0f172a;border:1px solid #334155;border-radius:6px;color:#fcd34d;padding:2px 4px;font-size:13px;font-weight:700;text-align:center;width:48px;cursor:text}
+  .pct-input.error{border-color:#ef4444;color:#fca5a5}
+  /* total bar */
+  .total-bar{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;transition:background .3s}
+  .total-bar.ok{background:#14532d33;border:1px solid #166534;color:#86efac}
+  .total-bar.bad{background:#7f1d1d33;border:1px solid #991b1b;color:#fca5a5}
+  .disclaimer{background:#1e293b;border-radius:8px;padding:12px 14px;border:1px solid rgba(245,158,11,.2);font-size:12px;color:#94a3b8}
+  .disclaimer b{color:#fbbf24}
+  @media(max-width:600px){.grid3{grid-template-columns:1fr 1fr}.stat-grid{grid-template-columns:1fr 1fr}.chart-controls{flex-direction:column;align-items:flex-start}}
+  @media(max-width:400px){.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<h1 id="mainTitle">💰 Financial Planner · ₹1 Crore Corpus</h1>
+<div class="sub">
+  Moderate risk · India · 10% target · Diversified
+  <span style="color:#475569">|</span>
+  <span style="color:#94a3b8">Corpus:</span>
+  <input type="number" class="ni" id="corpusInput" min="1" value="100" style="width:80px"/>
+  <span style="color:#64748b;font-size:12px">Lakh</span>
+</div>
+
+<!-- Summary Cards -->
+<div class="grid3">
+  <div class="card" style="border-top:3px solid #8b5cf6">
+    <div class="card-label">Blended Return</div>
+    <div class="card-val" style="color:#a78bfa" id="blendedReturn"></div>
+    <div class="card-sub">Weighted avg across assets</div>
+  </div>
+  <div class="card" style="border-top:3px solid #22c55e">
+    <div class="card-label">Annual Earnings</div>
+    <div class="card-val" style="color:#86efac" id="annualEarnings"></div>
+    <div class="card-sub" id="monthlyEarnings"></div>
+  </div>
+  <div class="card" style="border-top:3px solid #f59e0b">
+    <div class="card-label">Break-even Withdrawal</div>
+    <div class="card-val" style="color:#fcd34d" id="breakEvenCard"></div>
+    <div class="card-sub">Corpus stays flat</div>
+  </div>
+</div>
+
+<!-- Portfolio -->
+<div class="section">
+  <div class="section-title">📊 Portfolio Allocation <span style="font-weight:400;font-size:12px;color:#64748b">(edit % · click row for funds)</span></div>
+  <div class="port-flex">
+    <div class="port-list" id="portList"></div>
+    <div class="pie-wrap">
+      <canvas id="pieChart" width="180" height="180"></canvas>
+      <div class="pie-hint">Hover slices for %</div>
+    </div>
+  </div>
+  <!-- total indicator -->
+  <div class="total-bar ok" id="totalBar">✅ Total: 100% — Good to go!</div>
+</div>
+
+<!-- Withdrawal -->
+<div class="section">
+  <div class="section-title">📤 Monthly Withdrawal Calculator</div>
+  <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+    <span style="color:#94a3b8">Monthly Withdrawal</span>
+    <span id="monthlyLabel" style="font-weight:700;font-size:18px"></span>
+  </div>
+  <input type="range" id="withdrawSlider" min="1000" max="200000" step="1000"/>
+  <div class="range-labels"><span>₹1,000</span><span id="sliderMax"></span></div>
+  <div class="stat-grid">
+    <div class="stat-box"><div class="stat-label">Annual Withdrawn</div><div class="stat-val" id="annualWithdrawn"></div><div class="stat-sub" id="annualWithdrawnL"></div></div>
+    <div class="stat-box"><div class="stat-label">Net Growth Rate</div><div class="stat-val" id="netGrowth"></div><div class="stat-sub" id="netGrowthSub"></div></div>
+    <div class="stat-box"><div class="stat-label" id="corpusAfterLabel">Corpus After 20 Yrs</div><div class="stat-val" id="corpusAfterVal"></div><div class="stat-sub" id="corpusAfterSub"></div></div>
+  </div>
+  <div class="rec-box">
+    <div class="rec-title">💡 Recommended Withdrawal Ranges</div>
+    <div class="rec-row"><span style="color:#94a3b8">Conservative (Corpus grows 5%+ p.a.)</span><span id="rec1" style="font-weight:700;color:#22c55e"></span></div>
+    <div class="rec-row"><span style="color:#94a3b8">Balanced (Corpus grows ~2% p.a.)</span><span id="rec2" style="font-weight:700;color:#f59e0b"></span></div>
+    <div class="rec-row"><span style="color:#94a3b8">Break-even (Corpus stays flat)</span><span id="rec3" style="font-weight:700;color:#f97316"></span></div>
+  </div>
+</div>
+
+<!-- Chart -->
+<div class="section">
+  <div class="chart-header">
+    <div>
+      <span class="chart-title">📈 Corpus Projection</span>
+      <span id="chartMeta" style="font-size:12px;color:#94a3b8;margin-left:8px"></span>
+    </div>
+    <div class="chart-controls">
+      <div class="ctrl">
+        <label>Withdrawal Growth:</label>
+        <input type="number" class="ni" id="wGrowthInput" min="0" max="20" step="0.5" value="2" style="width:58px"/>
+        <span style="color:#64748b;font-size:12px">% / yr</span>
+      </div>
+      <div class="ctrl">
+        <label>Years:</label>
+        <input type="number" class="ni" id="yearsInput" min="1" max="50" value="20" style="width:60px"/>
+      </div>
+    </div>
+  </div>
+  <canvas id="lineChart"></canvas>
+  <div style="color:#475569;font-size:11px;text-align:center;margin-top:6px">Projections assume consistent returns. Actual returns may vary.</div>
+</div>
+
+<div class="disclaimer"><b>⚠️ Disclaimer: </b>For educational/planning purposes only. Returns are estimated and not guaranteed. Consult a SEBI-registered financial advisor before investing.</div>
+
+<script>
+const portfolio = [
+  { name:"Fixed Deposit",        pct:20, ret:7.25, risk:"Very Low", color:"#3b82f6", emoji:"🏦", funds:["SBI FD (2-3 yr)","HDFC FD (2 yr)","Post Office TD"],                              tag:"Capital Safety"  },
+  { name:"Debt Mutual Funds",    pct:15, ret:7.5,  risk:"Low",      color:"#06b6d4", emoji:"📋", funds:["ICICI Pru Short Term","SBI Magnum Medium Duration","HDFC Corporate Bond"],         tag:"Stable Income"   },
+  { name:"Index / Large Cap MF", pct:35, ret:12.0, risk:"Moderate", color:"#8b5cf6", emoji:"📈", funds:["UTI Nifty 50 Index","Mirae Asset Large Cap","Axis Bluechip Fund"],                tag:"Growth Engine"   },
+  { name:"Hybrid / Balanced MF", pct:20, ret:10.0, risk:"Moderate", color:"#f59e0b", emoji:"⚖️", funds:["HDFC Balanced Advantage","ICICI Pru Balanced Advantage","Kotak Equity Hybrid"],  tag:"Risk Buffer"     },
+  { name:"Gold ETF / SGB",       pct:10, ret:9.0,  risk:"Low–Med",  color:"#f97316", emoji:"🥇", funds:["Sovereign Gold Bonds (SGB)","Nippon India Gold ETF","HDFC Gold ETF"],             tag:"Inflation Hedge" },
+];
+const riskColors = {"Very Low":"#22c55e","Low":"#84cc16","Low–Med":"#eab308","Moderate":"#f97316"};
+
+// mutable pct array
+const pcts = portfolio.map(p => p.pct);
+
+const fmt  = n => "₹" + Math.round(n).toLocaleString("en-IN");
+const fmtL = n => n >= 100 ? "₹"+(n/100).toFixed(2)+" Cr" : "₹"+n.toFixed(2)+"L";
+
+let corpusL = 100, monthly = null, years = 20, wGrowth = 2, openRow = null;
+
+function totalPct()    { return pcts.reduce((s,v)=>s+v,0); }
+function wtdReturn()   { return portfolio.reduce((s,p,i)=>s+(pcts[i]/100)*p.ret,0); }
+function corpus()      { return corpusL * 100000; }
+function annualEarn()  { return corpus() * wtdReturn() / 100; }
+function breakEven()   { return Math.round(annualEarn() / 12); }
+function effMonthly()  { return monthly !== null ? monthly : Math.round(breakEven() * 0.55); }
+function isValid()     { return totalPct() === 100; }
+
+// ── Portfolio rows ──
+function buildPortfolio() {
+  const list = document.getElementById("portList");
+  list.innerHTML = "";
+  pcts.forEach((pct, i) => {
+    const p = portfolio[i];
+    const amt = (corpusL * pct / 100).toFixed(1);
+    const row = document.createElement("div");
+    row.className = "portfolio-row";
+    row.id = "prow-"+i;
+    row.innerHTML = `
+      <div style="width:10px;height:10px;border-radius:50%;background:${p.color};flex-shrink:0;margin-top:2px"></div>
+      <div style="flex:1">
+        <div style="font-weight:600;color:#f1f5f9;font-size:13px">${p.emoji} ${p.name}</div>
+        <div style="font-size:11px;color:#64748b">${p.tag} · ₹${amt}L · <span style="color:${riskColors[p.risk]}">${p.risk}</span> · <span style="color:#94a3b8">${p.ret}% ret</span></div>
+        <div class="fund-list" id="funds-${i}" style="display:none">
+          ${p.funds.map(f=>`<div class="fund-item">• ${f}</div>`).join("")}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
+        <input type="number" class="pct-input" id="pct-${i}" min="0" max="100" value="${pct}" title="Edit allocation %"/>
+        <span style="color:#94a3b8;font-size:13px">%</span>
+      </div>`;
+
+    // toggle funds on row click (not on input)
+    row.addEventListener("click", () => {
+      const fd = document.getElementById("funds-"+i);
+      if (openRow === i) { fd.style.display="none"; row.style.background=""; openRow=null; }
+      else {
+        if (openRow !== null) {
+          document.getElementById("funds-"+openRow).style.display="none";
+          const pr = document.getElementById("prow-"+openRow);
+          if (pr) pr.style.background="";
+        }
+        fd.style.display="block"; row.style.background="#0f172a"; openRow=i;
+      }
+    });
+
+    list.appendChild(row);
+
+    // pct input event
+    document.getElementById("pct-"+i).addEventListener("input", e => {
+      const val = Math.max(0, Math.min(100, +e.target.value||0));
+      pcts[i] = val;
+      if (isValid()) { monthly = null; }
+      updateTotalBar();
+      if (isValid()) { buildPie(); updateCards(); buildProjection(); buildWithdrawal(); }
+    });
+  });
+}
+
+function updateTotalBar() {
+  const t = totalPct();
+  const bar = document.getElementById("totalBar");
+  const ok = t === 100;
+  bar.className = "total-bar " + (ok ? "ok" : "bad");
+  bar.textContent = ok
+    ? "✅ Total: 100% — Good to go!"
+    : `⚠️ Total: ${t}% — Needs to be exactly 100% (${t<100?"add +"+(100-t)+"% more":"remove -"+(t-100)+"%"})`;
+  // highlight inputs
+  pcts.forEach((_,i) => {
+    const inp = document.getElementById("pct-"+i);
+    if (inp) inp.classList.toggle("error", !ok);
+  });
+}
+
+// ── Pie ──
+let pieInst = null;
+function buildPie() {
+  if (pieInst) pieInst.destroy();
+  const ctx = document.getElementById("pieChart").getContext("2d");
+  pieInst = new Chart(ctx, {
+    type:"doughnut",
+    data:{ labels:portfolio.map(p=>p.name), datasets:[{ data:[...pcts], backgroundColor:portfolio.map(p=>p.color), borderWidth:2, borderColor:"#0f172a", hoverOffset:6 }] },
+    options:{ plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => ` ${c.label}: ${c.parsed}%` } } }, cutout:"45%" }
+  });
+}
+
+// ── Line chart ──
+let lineInst = null;
+function buildProjection() {
+  if (!isValid()) return;
+  let c = corpus(), w = effMonthly();
+  const labels=[], withW=[], noW=[];
+  for (let yr=0; yr<=years; yr++) {
+    labels.push(yr===0?"Now":"Y"+yr);
+    withW.push(+(c/100000).toFixed(2));
+    noW.push(+((corpus()*Math.pow(1+wtdReturn()/100,yr))/100000).toFixed(2));
+    c = Math.max(0, c*(1+wtdReturn()/100) - w*12);
+    w = w*(1+wGrowth/100);
+  }
+  if (lineInst) lineInst.destroy();
+  const ctx = document.getElementById("lineChart").getContext("2d");
+  lineInst = new Chart(ctx, {
+    type:"line",
+    data:{ labels, datasets:[
+      { label:"With Withdrawal", data:withW, borderColor:"#8b5cf6", borderWidth:2.5, pointRadius:0, tension:.3 },
+      { label:"No Withdrawal",   data:noW,   borderColor:"#22c55e", borderWidth:2,   pointRadius:0, tension:.3, borderDash:[6,3] }
+    ]},
+    options:{ responsive:true,
+      plugins:{ legend:{ labels:{ color:"#94a3b8", font:{size:12} } },
+        tooltip:{ callbacks:{ label: c => ` ${c.dataset.label}: ${c.parsed.y>=100?"₹"+(c.parsed.y/100).toFixed(2)+" Cr":"₹"+c.parsed.y+"L"}` }, backgroundColor:"#0f172a", borderColor:"#334155", borderWidth:1, titleColor:"#e2e8f0", bodyColor:"#94a3b8" }
+      },
+      scales:{ x:{ ticks:{ color:"#64748b", maxTicksLimit:11 }, grid:{ color:"#1e293b" } }, y:{ ticks:{ color:"#64748b", callback: v => v>=100?"₹"+(v/100).toFixed(1)+"Cr":"₹"+v+"L" }, grid:{ color:"#1e293b" } } }
+    }
+  });
+  return withW;
+}
+
+function updateCards() {
+  if (!isValid()) return;
+  document.getElementById("mainTitle").textContent =
+    "💰 Financial Planner · " + (corpusL>=100?"₹"+(corpusL/100).toFixed(corpusL%100===0?0:2)+" Crore":"₹"+corpusL+"L") + " Corpus";
+  document.getElementById("blendedReturn").textContent  = wtdReturn().toFixed(2)+"% p.a.";
+  document.getElementById("annualEarnings").textContent = fmt(annualEarn());
+  document.getElementById("monthlyEarnings").textContent= fmt(annualEarn()/12)+" per month";
+  document.getElementById("breakEvenCard").textContent  = fmt(breakEven())+"/mo";
+}
+
+function buildWithdrawal() {
+  if (!isValid()) return;
+  const be = breakEven(), eff = effMonthly(), annual = eff*12;
+  const ngr = wtdReturn()/100 - annual/corpus();
+  const growing = ngr > 0;
+  const sliderMax = Math.max(200000, be*2);
+  const sl = document.getElementById("withdrawSlider");
+  sl.max = sliderMax; sl.value = eff;
+  sl.style.accentColor = growing?"#22c55e":"#ef4444";
+  document.getElementById("sliderMax").textContent     = fmt(sliderMax);
+  document.getElementById("monthlyLabel").textContent  = fmt(eff);
+  document.getElementById("monthlyLabel").style.color  = growing?"#86efac":"#fca5a5";
+  document.getElementById("annualWithdrawn").textContent  = fmt(annual);
+  document.getElementById("annualWithdrawnL").textContent = "₹"+(annual/100000).toFixed(1)+"L/year";
+  document.getElementById("netGrowth").textContent  = (ngr*100).toFixed(2)+"% p.a.";
+  document.getElementById("netGrowth").style.color  = growing?"#86efac":"#fca5a5";
+  document.getElementById("netGrowthSub").textContent = growing?"✅ Corpus growing!":"⚠️ Corpus shrinking";
+  document.getElementById("rec1").textContent = fmt(Math.round(be*0.45))+"/mo";
+  document.getElementById("rec2").textContent = fmt(Math.round(be*0.75))+"/mo";
+  document.getElementById("rec3").textContent = fmt(be)+"/mo";
+
+  const withW = buildProjection();
+  if (withW) {
+    const last = withW[withW.length-1];
+    document.getElementById("corpusAfterLabel").textContent = "Corpus After "+years+" Yr"+(years!==1?"s":"");
+    document.getElementById("corpusAfterVal").textContent   = fmtL(last);
+    document.getElementById("corpusAfterSub").textContent   = last>corpusL?"📈 +"+fmtL(last-corpusL):"📉 -"+fmtL(corpusL-last);
+  }
+  const meta = document.getElementById("chartMeta");
+  meta.innerHTML = `withdrawing <b style="color:${growing?'#86efac':'#fca5a5'}">${fmt(eff)}/mo</b>${wGrowth>0?` <b style="color:#f59e0b">+${wGrowth}%/yr</b>`:""}`;
+}
+
+function fullUpdate() {
+  buildPortfolio();
+  buildPie();
+  updateCards();
+  buildWithdrawal();
+  updateTotalBar();
+}
+
+// ── Events ──
+document.getElementById("corpusInput").addEventListener("input", e => {
+  corpusL = Math.max(1, +e.target.value||1); monthly = null; buildPortfolio(); updateCards(); buildWithdrawal(); updateTotalBar();
+});
+document.getElementById("withdrawSlider").addEventListener("input", e => {
+  monthly = +e.target.value; buildWithdrawal();
+});
+document.getElementById("yearsInput").addEventListener("input", e => {
+  years = Math.max(1, Math.min(50, +e.target.value||1)); buildWithdrawal();
+});
+document.getElementById("wGrowthInput").addEventListener("input", e => {
+  wGrowth = Math.max(0, Math.min(20, +e.target.value||0)); buildWithdrawal();
+});
+
+fullUpdate();
+</script>
+</body>
+</html>
