@@ -273,9 +273,21 @@ function buildProjection() {
       { label:"With Withdrawal", data:withW, borderColor:"#8b5cf6", borderWidth:2.5, pointRadius:0, tension:.3 },
       { label:"No Withdrawal",   data:noW,   borderColor:"#22c55e", borderWidth:2,   pointRadius:0, tension:.3, borderDash:[6,3] }
     ]},
-    options:{ responsive:true,
+    options:{ responsive:true, interaction:{ mode:"index", intersect:false },
       plugins:{ legend:{ labels:{ color:"#94a3b8", font:{size:12} } },
-        tooltip:{ callbacks:{ label: c => ` ${c.dataset.label}: ${c.parsed.y>=100?"₹"+(c.parsed.y/100).toFixed(2)+" Cr":"₹"+c.parsed.y+"L"}` }, backgroundColor:"#0f172a", borderColor:"#334155", borderWidth:1, titleColor:"#e2e8f0", bodyColor:"#94a3b8" }
+        tooltip:{
+          mode:"index", intersect:false,
+          backgroundColor:"#0f172a", borderColor:"#334155", borderWidth:1,
+          titleColor:"#e2e8f0", bodyColor:"#94a3b8", padding:10,
+          callbacks:{
+            title: items => "📅 " + items[0].label,
+            label: c => {
+              const v = c.parsed.y;
+              const formatted = v >= 100 ? "₹"+(v/100).toFixed(2)+" Cr" : "₹"+v.toFixed(2)+"L";
+              return "  " + c.dataset.label + ": " + formatted;
+            }
+          }
+        }
       },
       scales:{ x:{ ticks:{ color:"#64748b", maxTicksLimit:11 }, grid:{ color:"#1e293b" } }, y:{ ticks:{ color:"#64748b", callback: v => v>=100?"₹"+(v/100).toFixed(1)+"Cr":"₹"+v+"L" }, grid:{ color:"#1e293b" } } }
     }
